@@ -1,13 +1,15 @@
 "use strict";
-console.log("site.js version 2 loaded");
-console.log("asdasdasd");
 window.Webflow ||= [];
 window.Webflow.push(() => {
+  
   if (typeof gsap === "undefined" || typeof ScrollTrigger === "undefined") {
     console.warn("GSAP/ScrollTrigger ще не готові");
     return;
   }
   gsap.registerPlugin(ScrollTrigger);
+
+  console.log("site.js version 2 loaded");
+console.log("asdasdasd");
 
 (() => {
   const burger = document.querySelector('.nav_menu-burger');
