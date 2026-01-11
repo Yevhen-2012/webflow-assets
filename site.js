@@ -7,10 +7,6 @@ window.Webflow.push(() => {
     return;
   }
   gsap.registerPlugin(ScrollTrigger);
-
-  console.log("site.js version 2 loaded");
-console.log("asdasdasd");
-
 (() => {
   const burger = document.querySelector('.nav_menu-burger');
   const panel  = document.querySelector('.nav-wraper');
