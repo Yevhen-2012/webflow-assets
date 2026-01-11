@@ -305,24 +305,35 @@ window.Webflow.push(() => {
 
 
 
-// Accordeon
+// Accordion
 
-const SINGLE_OPEN = true;   // только один открыт
-const DURATION = 0.5;       // скорость анимации
-const PEEK_LINES = 1;       // сколько строк показывать в закрытом состоянии
+const SINGLE_OPEN = true;   // тільки один відкритий
+const DURATION = 0.5;       // швидкість анімації
+const PEEK_LINES = 1;       // скільки рядків показувати в закритому стані
 
-function debounce(fn, wait=150){ let t; return (...a)=>{clearTimeout(t); t=setTimeout(()=>fn(...a),wait);} }
+function debounce(fn, wait = 150) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); };
+}
 
-document.addEventListener('DOMContentLoaded', () => {
-  // поддержим оба варианта классов на всякий
+function initAccordion() {
+  if (typeof gsap === "undefined") {
+    console.warn("GSAP не знайдено (accordion)");
+    return;
+  }
+
   const rows = gsap.utils.toArray('.row-wraper, .row-wrapper');
+  if (!rows.length) {
+    console.warn("Accordion: не знайдено .row-wraper/.row-wrapper");
+    return;
+  }
 
   rows.forEach((row) => {
     const trigger = row.querySelector('.col-2-text') || row.querySelector('.col2-item');
     const panel   = row.querySelector('.col3-item');
     if (!trigger || !panel) return;
 
-    // обёртка для контента
+    // обгортка для контенту
     let inner = panel.querySelector('.col3-panel-inner');
     if (!inner) {
       inner = document.createElement('div');
@@ -331,46 +342,43 @@ document.addEventListener('DOMContentLoaded', () => {
       panel.appendChild(inner);
     }
 
-    // helper: вычислить высоту одной строки для "peek"
-    function getLineHeight(el){
+    function getLineHeight(el) {
       const cs = getComputedStyle(el);
       let lh = parseFloat(cs.lineHeight);
-      if (isNaN(lh)) { // line-height: normal
+      if (isNaN(lh)) {
         const fontSize = parseFloat(cs.fontSize) || 16;
         lh = Math.round(fontSize * 1.2);
       }
       return lh;
     }
 
-    // найдём первый текстовый элемент внутри для корректного line-height
-    const firstTextEl =
-      inner.querySelector('p,li,span,div,h1,h2,h3,h4,h5,h6') || inner;
+    const firstTextEl = inner.querySelector('p, li, span, div, h1, h2, h3, h4, h5, h6') || inner;
 
-    // посчитаем "свернутую" высоту (PEEK_LINES строк + вертикальные паддинги самой панели)
-    function computeCollapsedHeight(){
+    function computeCollapsedHeight() {
       const lh = getLineHeight(firstTextEl);
       const csPanel = getComputedStyle(panel);
-      const padY = parseFloat(csPanel.paddingTop || 0) + parseFloat(csPanel.paddingBottom || 0);
+      const padY = (parseFloat(csPanel.paddingTop) || 0) + (parseFloat(csPanel.paddingBottom) || 0);
       return Math.ceil(lh * PEEK_LINES + padY);
     }
 
-    // стартовое состояние: видим одну строку
-    const collapsedH = computeCollapsedHeight();
-    gsap.set(panel, { display: 'block', overflow: 'hidden', height: collapsedH });
+    // стартовий стан
+    row._acc = row._acc || {};
+    row._acc.collapsedH = computeCollapsedHeight();
 
-    // таймлайн открытия
-    const tl = gsap.timeline({ paused: true })
-      .to(panel, { height: 'auto', duration: DURATION, ease: 'power2.out' });
+    gsap.set(panel, { display: 'block', overflow: 'hidden', height: row._acc.collapsedH });
 
-    row._acc = { tl, open: false, panel, collapsedH };
+    row._acc.open = false;
+    row.classList.remove('is-open');
 
-    // клик
     trigger.style.cursor = 'pointer';
-    trigger.addEventListener('click', () => {
+
+    trigger.addEventListener('click', (e) => {
+      // якщо всередині тригера є <a>, інколи він “з’їдає” клік
+      if (e.target.closest('a')) e.preventDefault();
+
       if (SINGLE_OPEN) {
         rows.forEach(r => {
           if (r !== row && r._acc?.open) {
-            // закрываем другие — возвращаем к peek-высоте
             gsap.to(r._acc.panel, { height: r._acc.collapsedH, duration: DURATION, ease: 'power2.inOut' });
             r._acc.open = false;
             r.classList.remove('is-open');
@@ -379,45 +387,50 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (!row._acc.open) {
-        // открыть
-        row._acc.tl.clear().to(panel, { height: 'auto', duration: DURATION, ease: 'power2.out' }).play();
+        // відкрити
+        row._acc.panel = panel;
+        gsap.to(panel, { height: 'auto', duration: DURATION, ease: 'power2.out' });
         row._acc.open = true;
         row.classList.add('is-open');
       } else {
-        // закрыть до peek
+        // закрити до peek
         gsap.to(panel, { height: row._acc.collapsedH, duration: DURATION, ease: 'power2.inOut' });
         row._acc.open = false;
         row.classList.remove('is-open');
       }
     });
+
+    row._acc.panel = panel;
   });
 
-  // при ресайзе пересчитать высоту peek у открытых/закрытых
+  // ресайз: перерахувати peek
   window.addEventListener('resize', debounce(() => {
     rows.forEach(r => {
-      if (!r._acc) return;
-      // пересчитать collapsedH (вдруг изменилась ширина/line-height)
-      const firstTextEl =
-        r._acc.panel.querySelector('.col3-panel-inner p,li,span,div,h1,h2,h3,h4,h5,h6') || r._acc.panel.firstElementChild;
-      const lh = (function(el){
-        const cs = getComputedStyle(el);
-        let v = parseFloat(cs.lineHeight);
-        if (isNaN(v)) v = Math.round((parseFloat(cs.fontSize)||16) * 1.2);
-        return v;
-      })(firstTextEl || r._acc.panel);
-      const csPanel = getComputedStyle(r._acc.panel);
-      const padY = parseFloat(csPanel.paddingTop||0) + parseFloat(csPanel.paddingBottom||0);
+      if (!r._acc?.panel) return;
+
+      const panel = r._acc.panel;
+      const inner = panel.querySelector('.col3-panel-inner') || panel;
+
+      const firstTextEl = inner.querySelector('p, li, span, div, h1, h2, h3, h4, h5, h6') || inner;
+
+      const cs = getComputedStyle(firstTextEl);
+      let lh = parseFloat(cs.lineHeight);
+      if (isNaN(lh)) lh = Math.round((parseFloat(cs.fontSize) || 16) * 1.2);
+
+      const csPanel = getComputedStyle(panel);
+      const padY = (parseFloat(csPanel.paddingTop) || 0) + (parseFloat(csPanel.paddingBottom) || 0);
+
       r._acc.collapsedH = Math.ceil(lh * PEEK_LINES + padY);
 
-      if (r._acc.open) {
-        // у открытых ставим auto, чтобы контент не обрезался
-        gsap.set(r._acc.panel, { height: 'auto' });
-      } else {
-        gsap.set(r._acc.panel, { height: r._acc.collapsedH });
-      }
+      if (r._acc.open) gsap.set(panel, { height: 'auto' });
+      else gsap.set(panel, { height: r._acc.collapsedH });
     });
   }, 150));
-});
+}
+
+// ✅ Webflow-safe init
+window.Webflow ||= [];
+window.Webflow.push(initAccordion);
 
 
 // анімація скроллу 
