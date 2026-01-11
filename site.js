@@ -1,4 +1,5 @@
 "use strict";
+console.log("site.js version 2 loaded");
 console.log("asdasdasd");
 window.Webflow ||= [];
 window.Webflow.push(() => {
