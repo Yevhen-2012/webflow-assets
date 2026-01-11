@@ -106,100 +106,155 @@ window.Webflow.push(() => {
 })();
 
 
-
+// картки анімація
 (() => {
-    const wrap  = document.querySelector('.section_products-wraper');
-    const cards = gsap.utils.toArray('.section_products-card');
-    if (!wrap || !cards.length) return;
-  
-    // равные доли (проценты через flex-basis)
-    const base = 100 / cards.length;
-    const expanded = 50;                                // активная, %
-    const rest = (100 - expanded) / (cards.length - 1);
-  
-    // базовые состояния
-    gsap.set(cards, { flexGrow: 0, flexShrink: 0, flexBasis: base + '%', minWidth: 0 });
-    gsap.set('.button-main-card', { autoAlpha: 0, y: 8, pointerEvents: 'none' }); // кнопки скрыты
-  
-    let hoverDelay = null;
-    let resetDelay = null;
-    let activeCard = null;
-  
-    const isDesktop = () => !window.matchMedia('(max-width: 991px)').matches;
-  
-    function killTimers(){
-      if (hoverDelay) { hoverDelay.kill(); hoverDelay = null; }
-      if (resetDelay) { resetDelay.kill(); resetDelay = null; }
-    }
-  
-    function showButtonIn(card){
-      const btn = card.querySelector('.button-main-card');
-      if (!btn) return;
-      gsap.to(btn, {
-        autoAlpha: 1, y: 0, duration: 0.35, ease: 'power2.out', delay: 0.15,
-        onStart(){ btn.style.pointerEvents = 'auto'; }
+  const wrap  = document.querySelector('.section_products-wraper');
+  const cards = gsap.utils.toArray('.section_products-card');
+  if (!wrap || !cards.length) return;
+
+  // равные доли (проценты через flex-basis)
+  const base = 100 / cards.length;
+  const expanded = 50;                                // активная, %
+  const rest = (100 - expanded) / (cards.length - 1);
+
+  // базовые состояния карточек
+  gsap.set(cards, { flexGrow: 0, flexShrink: 0, flexBasis: base + '%', minWidth: 0 });
+
+  let hoverDelay = null;
+  let resetDelay = null;
+  let activeCard = null;
+
+  function killTimers(){
+    if (hoverDelay) { hoverDelay.kill(); hoverDelay = null; }
+    if (resetDelay) { resetDelay.kill(); resetDelay = null; }
+  }
+
+  function showButtonIn(card){
+    const btn = card.querySelector('.button-main-card');
+    if (!btn) return;
+    gsap.to(btn, {
+      autoAlpha: 1,
+      y: 0,
+      duration: 0.35,
+      ease: 'power2.out',
+      delay: 0.15,
+      onStart(){ btn.style.pointerEvents = 'auto'; }
+    });
+  }
+
+  function hideButtonIn(card){
+    const btn = card.querySelector('.button-main-card');
+    if (!btn) return;
+    gsap.to(btn, {
+      autoAlpha: 0,
+      y: 8,
+      duration: 0.25,
+      ease: 'power2.in',
+      onComplete(){ btn.style.pointerEvents = 'none'; }
+    });
+  }
+
+  function expand(target){
+    activeCard = target;
+    cards.forEach(card => {
+      gsap.to(card, {
+        flexBasis: (card === target ? expanded : rest) + '%',
+        duration: 0.8,
+        ease: 'power3.out'
       });
-    }
-    function hideButtonIn(card){
-      const btn = card.querySelector('.button-main-card');
-      if (!btn) return;
-      gsap.to(btn, {
-        autoAlpha: 0, y: 8, duration: 0.25, ease: 'power2.in',
-        onComplete(){ btn.style.pointerEvents = 'none'; }
-      });
-    }
-  
-    function expand(target){
-      activeCard = target;
-      cards.forEach(card => {
-        gsap.to(card, {
-          flexBasis: (card === target ? expanded : rest) + '%',
-          duration: 0.8,
-          ease: 'power3.out'
-        });
-        // кнопка: у активной показать, у остальных скрыть
-        if (card === target) showButtonIn(card); else hideButtonIn(card);
-      });
-    }
-  
-    function reset(){
-      activeCard = null;
-      gsap.to(cards, { flexBasis: base + '%', duration: 0.6, ease: 'power3.inOut' });
-      // спрятать все кнопки
-      cards.forEach(hideButtonIn);
-    }
-  
+
+      if (card === target) showButtonIn(card);
+      else hideButtonIn(card);
+    });
+  }
+
+  function reset(){
+    activeCard = null;
+    gsap.to(cards, { flexBasis: base + '%', duration: 0.6, ease: 'power3.inOut' });
+    cards.forEach(hideButtonIn);
+  }
+
+  // ==========================
+  // ВАРИАНТ 2: matchMedia
+  // ==========================
+  const mm = gsap.matchMedia();
+
+  // DESKTOP: включаем hover-логику и прячем кнопки по умолчанию
+  mm.add("(min-width: 992px)", () => {
+    // кнопки скрыты по умолчанию (только на desktop)
+    gsap.set('.button-main-card', { autoAlpha: 0, y: 8, pointerEvents: 'none' });
+
     function onEnter(card){
-      if (!isDesktop()) return;
       killTimers();
-      hoverDelay = gsap.delayedCall(0.2, () => expand(card)); // задержка 0.2 c
+      hoverDelay = gsap.delayedCall(0.2, () => expand(card));
     }
+
     function onLeaveCard(){
-      if (!isDesktop()) return;
       killTimers();
-      // если ушли в «зазор» и не зашли на другую — мягкий сброс
       resetDelay = gsap.delayedCall(0.1, () => {
         if (!wrap.matches(':hover')) reset();
         else if (!activeCard) reset();
       });
     }
+
     function onLeaveWrap(){
-      if (!isDesktop()) return;
       killTimers();
       reset();
     }
-  
-    cards.forEach(card => {
-      card.addEventListener('pointerenter', () => onEnter(card));
-      card.addEventListener('pointerleave', onLeaveCard);
-    });
-    wrap.addEventListener('pointerleave', onLeaveWrap);
-  
-    // страховки
-    window.addEventListener('resize', () => { killTimers(); reset(); });
-    document.addEventListener('visibilitychange', () => { if (document.hidden){ killTimers(); reset(); }});
-  })();
 
+    // навешиваем обработчики и возвращаем cleanup
+    cards.forEach(card => {
+      card.addEventListener('pointerenter', card.__enterHandler = () => onEnter(card));
+      card.addEventListener('pointerleave', card.__leaveHandler = onLeaveCard);
+    });
+    wrap.addEventListener('pointerleave', wrap.__wrapLeaveHandler = onLeaveWrap);
+
+    const onResize = () => { killTimers(); reset(); };
+    const onVis = () => { if (document.hidden){ killTimers(); reset(); }};
+
+    window.addEventListener('resize', onResize);
+    document.addEventListener('visibilitychange', onVis);
+
+    return () => {
+      // cleanup при смене брейкпоинта
+      killTimers();
+      reset();
+
+      cards.forEach(card => {
+        if (card.__enterHandler) card.removeEventListener('pointerenter', card.__enterHandler);
+        if (card.__leaveHandler) card.removeEventListener('pointerleave', card.__leaveHandler);
+        card.__enterHandler = null;
+        card.__leaveHandler = null;
+      });
+
+      if (wrap.__wrapLeaveHandler) wrap.removeEventListener('pointerleave', wrap.__wrapLeaveHandler);
+      wrap.__wrapLeaveHandler = null;
+
+      window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  });
+
+  // TABLET + ниже: показываем кнопки всегда, убираем inline-скрытие
+  mm.add("(max-width: 991px)", () => {
+    killTimers();
+    activeCard = null;
+
+    // вернуть карточки в базовое состояние
+    gsap.set(cards, { flexBasis: base + '%' });
+
+    // главное: сделать кнопки видимыми и убрать inline свойства, которые прятали
+    gsap.set('.button-main-card', {
+      autoAlpha: 1,
+      y: 0,
+      pointerEvents: 'auto',
+      clearProps: 'transform,opacity,visibility'
+    });
+
+    // cleanup на выход (если вернулись на desktop)
+    return () => {};
+  });
+})();
 
 
 
