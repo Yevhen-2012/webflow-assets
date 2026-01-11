@@ -1,6 +1,12 @@
+"use strict";
 window.Webflow ||= [];
 window.Webflow.push(() => {
-"use strict";
+  if (typeof gsap === "undefined" || typeof ScrollTrigger === "undefined") {
+    console.warn("GSAP/ScrollTrigger ще не готові");
+    return;
+  }
+  gsap.registerPlugin(ScrollTrigger);
+
 (() => {
   const burger = document.querySelector('.nav_menu-burger');
   const panel  = document.querySelector('.nav-wraper');
