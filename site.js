@@ -1,5 +1,5 @@
 "use strict";
-console.log: "asdasdasd";
+console.log("asdasdasd");
 window.Webflow ||= [];
 window.Webflow.push(() => {
   if (typeof gsap === "undefined" || typeof ScrollTrigger === "undefined") {
