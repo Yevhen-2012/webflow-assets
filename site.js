@@ -106,155 +106,155 @@ window.Webflow.push(() => {
 })();
 
 
-// картки анімація
-(() => {
-  const wrap  = document.querySelector('.section_products-wraper');
-  const cards = gsap.utils.toArray('.section_products-card');
-  if (!wrap || !cards.length) return;
+// // картки анімація
+// (() => {
+//   const wrap  = document.querySelector('.section_products-wraper');
+//   const cards = gsap.utils.toArray('.section_products-card');
+//   if (!wrap || !cards.length) return;
 
-  // равные доли (проценты через flex-basis)
-  const base = 100 / cards.length;
-  const expanded = 50;                                // активная, %
-  const rest = (100 - expanded) / (cards.length - 1);
+//   // равные доли (проценты через flex-basis)
+//   const base = 100 / cards.length;
+//   const expanded = 50;                                // активная, %
+//   const rest = (100 - expanded) / (cards.length - 1);
 
-  // базовые состояния карточек
-  gsap.set(cards, { flexGrow: 0, flexShrink: 0, flexBasis: base + '%', minWidth: 0 });
+//   // базовые состояния карточек
+//   gsap.set(cards, { flexGrow: 0, flexShrink: 0, flexBasis: base + '%', minWidth: 0 });
 
-  let hoverDelay = null;
-  let resetDelay = null;
-  let activeCard = null;
+//   let hoverDelay = null;
+//   let resetDelay = null;
+//   let activeCard = null;
 
-  function killTimers(){
-    if (hoverDelay) { hoverDelay.kill(); hoverDelay = null; }
-    if (resetDelay) { resetDelay.kill(); resetDelay = null; }
-  }
+//   function killTimers(){
+//     if (hoverDelay) { hoverDelay.kill(); hoverDelay = null; }
+//     if (resetDelay) { resetDelay.kill(); resetDelay = null; }
+//   }
 
-  function showButtonIn(card){
-    const btn = card.querySelector('.button-main-card');
-    if (!btn) return;
-    gsap.to(btn, {
-      autoAlpha: 1,
-      y: 0,
-      duration: 0.35,
-      ease: 'power2.out',
-      delay: 0.15,
-      onStart(){ btn.style.pointerEvents = 'auto'; }
-    });
-  }
+//   function showButtonIn(card){
+//     const btn = card.querySelector('.button-main-card');
+//     if (!btn) return;
+//     gsap.to(btn, {
+//       autoAlpha: 1,
+//       y: 0,
+//       duration: 0.35,
+//       ease: 'power2.out',
+//       delay: 0.15,
+//       onStart(){ btn.style.pointerEvents = 'auto'; }
+//     });
+//   }
 
-  function hideButtonIn(card){
-    const btn = card.querySelector('.button-main-card');
-    if (!btn) return;
-    gsap.to(btn, {
-      autoAlpha: 0,
-      y: 8,
-      duration: 0.25,
-      ease: 'power2.in',
-      onComplete(){ btn.style.pointerEvents = 'none'; }
-    });
-  }
+//   function hideButtonIn(card){
+//     const btn = card.querySelector('.button-main-card');
+//     if (!btn) return;
+//     gsap.to(btn, {
+//       autoAlpha: 0,
+//       y: 8,
+//       duration: 0.25,
+//       ease: 'power2.in',
+//       onComplete(){ btn.style.pointerEvents = 'none'; }
+//     });
+//   }
 
-  function expand(target){
-    activeCard = target;
-    cards.forEach(card => {
-      gsap.to(card, {
-        flexBasis: (card === target ? expanded : rest) + '%',
-        duration: 0.8,
-        ease: 'power3.out'
-      });
+//   function expand(target){
+//     activeCard = target;
+//     cards.forEach(card => {
+//       gsap.to(card, {
+//         flexBasis: (card === target ? expanded : rest) + '%',
+//         duration: 0.8,
+//         ease: 'power3.out'
+//       });
 
-      if (card === target) showButtonIn(card);
-      else hideButtonIn(card);
-    });
-  }
+//       if (card === target) showButtonIn(card);
+//       else hideButtonIn(card);
+//     });
+//   }
 
-  function reset(){
-    activeCard = null;
-    gsap.to(cards, { flexBasis: base + '%', duration: 0.6, ease: 'power3.inOut' });
-    cards.forEach(hideButtonIn);
-  }
+//   function reset(){
+//     activeCard = null;
+//     gsap.to(cards, { flexBasis: base + '%', duration: 0.6, ease: 'power3.inOut' });
+//     cards.forEach(hideButtonIn);
+//   }
 
-  // ==========================
-  // ВАРИАНТ 2: matchMedia
-  // ==========================
-  const mm = gsap.matchMedia();
+//   // ==========================
+//   // ВАРИАНТ 2: matchMedia
+//   // ==========================
+//   const mm = gsap.matchMedia();
 
-  // DESKTOP: включаем hover-логику и прячем кнопки по умолчанию
-  mm.add("(min-width: 992px)", () => {
-    // кнопки скрыты по умолчанию (только на desktop)
-    gsap.set('.button-main-card', { autoAlpha: 0, y: 8, pointerEvents: 'none' });
+//   // DESKTOP: включаем hover-логику и прячем кнопки по умолчанию
+//   mm.add("(min-width: 992px)", () => {
+//     // кнопки скрыты по умолчанию (только на desktop)
+//     gsap.set('.button-main-card', { autoAlpha: 0, y: 8, pointerEvents: 'none' });
 
-    function onEnter(card){
-      killTimers();
-      hoverDelay = gsap.delayedCall(0.2, () => expand(card));
-    }
+//     function onEnter(card){
+//       killTimers();
+//       hoverDelay = gsap.delayedCall(0.2, () => expand(card));
+//     }
 
-    function onLeaveCard(){
-      killTimers();
-      resetDelay = gsap.delayedCall(0.1, () => {
-        if (!wrap.matches(':hover')) reset();
-        else if (!activeCard) reset();
-      });
-    }
+//     function onLeaveCard(){
+//       killTimers();
+//       resetDelay = gsap.delayedCall(0.1, () => {
+//         if (!wrap.matches(':hover')) reset();
+//         else if (!activeCard) reset();
+//       });
+//     }
 
-    function onLeaveWrap(){
-      killTimers();
-      reset();
-    }
+//     function onLeaveWrap(){
+//       killTimers();
+//       reset();
+//     }
 
-    // навешиваем обработчики и возвращаем cleanup
-    cards.forEach(card => {
-      card.addEventListener('pointerenter', card.__enterHandler = () => onEnter(card));
-      card.addEventListener('pointerleave', card.__leaveHandler = onLeaveCard);
-    });
-    wrap.addEventListener('pointerleave', wrap.__wrapLeaveHandler = onLeaveWrap);
+//     // навешиваем обработчики и возвращаем cleanup
+//     cards.forEach(card => {
+//       card.addEventListener('pointerenter', card.__enterHandler = () => onEnter(card));
+//       card.addEventListener('pointerleave', card.__leaveHandler = onLeaveCard);
+//     });
+//     wrap.addEventListener('pointerleave', wrap.__wrapLeaveHandler = onLeaveWrap);
 
-    const onResize = () => { killTimers(); reset(); };
-    const onVis = () => { if (document.hidden){ killTimers(); reset(); }};
+//     const onResize = () => { killTimers(); reset(); };
+//     const onVis = () => { if (document.hidden){ killTimers(); reset(); }};
 
-    window.addEventListener('resize', onResize);
-    document.addEventListener('visibilitychange', onVis);
+//     window.addEventListener('resize', onResize);
+//     document.addEventListener('visibilitychange', onVis);
 
-    return () => {
-      // cleanup при смене брейкпоинта
-      killTimers();
-      reset();
+//     return () => {
+//       // cleanup при смене брейкпоинта
+//       killTimers();
+//       reset();
 
-      cards.forEach(card => {
-        if (card.__enterHandler) card.removeEventListener('pointerenter', card.__enterHandler);
-        if (card.__leaveHandler) card.removeEventListener('pointerleave', card.__leaveHandler);
-        card.__enterHandler = null;
-        card.__leaveHandler = null;
-      });
+//       cards.forEach(card => {
+//         if (card.__enterHandler) card.removeEventListener('pointerenter', card.__enterHandler);
+//         if (card.__leaveHandler) card.removeEventListener('pointerleave', card.__leaveHandler);
+//         card.__enterHandler = null;
+//         card.__leaveHandler = null;
+//       });
 
-      if (wrap.__wrapLeaveHandler) wrap.removeEventListener('pointerleave', wrap.__wrapLeaveHandler);
-      wrap.__wrapLeaveHandler = null;
+//       if (wrap.__wrapLeaveHandler) wrap.removeEventListener('pointerleave', wrap.__wrapLeaveHandler);
+//       wrap.__wrapLeaveHandler = null;
 
-      window.removeEventListener('resize', onResize);
-      document.removeEventListener('visibilitychange', onVis);
-    };
-  });
+//       window.removeEventListener('resize', onResize);
+//       document.removeEventListener('visibilitychange', onVis);
+//     };
+//   });
 
-  // TABLET + ниже: показываем кнопки всегда, убираем inline-скрытие
-  mm.add("(max-width: 991px)", () => {
-    killTimers();
-    activeCard = null;
+//   // TABLET + ниже: показываем кнопки всегда, убираем inline-скрытие
+//   mm.add("(max-width: 991px)", () => {
+//     killTimers();
+//     activeCard = null;
 
-    // вернуть карточки в базовое состояние
-    gsap.set(cards, { flexBasis: base + '%' });
+//     // вернуть карточки в базовое состояние
+//     gsap.set(cards, { flexBasis: base + '%' });
 
-    // главное: сделать кнопки видимыми и убрать inline свойства, которые прятали
-    gsap.set('.button-main-card', {
-      autoAlpha: 1,
-      y: 0,
-      pointerEvents: 'auto',
-      clearProps: 'transform,opacity,visibility'
-    });
+//     // главное: сделать кнопки видимыми и убрать inline свойства, которые прятали
+//     gsap.set('.button-main-card', {
+//       autoAlpha: 1,
+//       y: 0,
+//       pointerEvents: 'auto',
+//       clearProps: 'transform,opacity,visibility'
+//     });
 
-    // cleanup на выход (если вернулись на desktop)
-    return () => {};
-  });
-})();
+//     // cleanup на выход (если вернулись на desktop)
+//     return () => {};
+//   });
+// })();
 
 
 
