@@ -42,6 +42,7 @@ window.Webflow.push(() => {
     tl.reverse();
   }
 
+  
   // когда закрытие полностью завершилось — вернуть стартовые значения на всякий
   tl.eventCallback('onReverseComplete', () => {
     gsap.set(panel, { x: '100%', opacity: 0 });
