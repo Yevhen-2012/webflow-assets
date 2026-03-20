@@ -29,13 +29,21 @@ window.Webflow.push(() => {
     accordionTrigger: ".col-2-text, .col2-item",
     accordionPanel: ".col3-item",
 
-    revealContainer: ".container"
+    revealContainer: ".container",
+
+    productCard: ".section_products-grid-card",
+    productButton: ".button-main_btn",
+    productButtonArrow: ".awesome-arrow",
+    blurLayer: ".blur_layer",
+    verticalLine: ".vertical-line",
+    hiddenText: ".hidden-text"
   };
 
   const CONFIG = {
     accordionSingleOpen: true,
     accordionDuration: 0.5,
-    accordionPeekLines: 1
+    accordionPeekLines: 1,
+    desktopMin: 992
   };
 
   function debounce(fn, wait = 150) {
@@ -53,6 +61,205 @@ window.Webflow.push(() => {
       field?.querySelector("div, span, p");
 
     return (textEl?.textContent || "").trim();
+  }
+
+  function initProductButtonArrowHover() {
+    if (!hasGSAP) return;
+
+    const buttons = document.querySelectorAll(
+      `${SELECTORS.productCard} ${SELECTORS.productButton}`
+    );
+    if (!buttons.length) return;
+
+    buttons.forEach((button) => {
+      if (button.dataset.arrowHoverInit === "true") return;
+      button.dataset.arrowHoverInit = "true";
+
+      const arrow = button.querySelector(SELECTORS.productButtonArrow);
+      if (!arrow) return;
+
+      gsap.set(arrow, { x: 0 });
+
+      const onEnter = () => {
+        gsap.to(arrow, {
+          x: 10,
+          duration: 0.3,
+          ease: "bounce.out",
+          overwrite: "auto"
+        });
+      };
+
+      const onLeave = () => {
+        gsap.to(arrow, {
+          x: 0,
+          duration: 0.3,
+          ease: "bounce.out",
+          overwrite: "auto"
+        });
+      };
+
+      button.addEventListener("mouseenter", onEnter);
+      button.addEventListener("mouseleave", onLeave);
+    });
+  }
+
+  function initProductCardHover() {
+    if (!hasGSAP) {
+      console.warn("GSAP не найден");
+      return;
+    }
+
+    const mm = gsap.matchMedia();
+
+    mm.add(`(min-width: ${CONFIG.desktopMin}px)`, () => {
+      const cards = document.querySelectorAll(SELECTORS.productCard);
+      if (!cards.length) return;
+
+      const cleanups = [];
+
+      cards.forEach((card) => {
+        const blurLayer = card.querySelector(SELECTORS.blurLayer);
+        const verticalLine = card.querySelector(SELECTORS.verticalLine);
+        const hiddenText = card.querySelector(SELECTORS.hiddenText);
+
+        if (!blurLayer || !verticalLine || !hiddenText) return;
+        if (card.dataset.hoverInit === "true") return;
+        card.dataset.hoverInit = "true";
+
+        gsap.set(blurLayer, {
+          opacity: 0,
+          scale: 1.03,
+          pointerEvents: "none"
+        });
+
+        gsap.set(verticalLine, {
+          rotate: 0,
+          height: "3rem",
+          x: 0,
+          transformOrigin: "50% 50%"
+        });
+
+        gsap.set(hiddenText, {
+          opacity: 0,
+          x: 0,
+          y: 0
+        });
+
+        function getLineShiftToCenter() {
+          const cardRect = card.getBoundingClientRect();
+          const lineRect = verticalLine.getBoundingClientRect();
+
+          const cardCenter = cardRect.left + cardRect.width / 2;
+          const lineCenter = lineRect.left + lineRect.width / 2;
+
+          return cardCenter - lineCenter;
+        }
+
+        function getTextShiftToCenter() {
+          const cardRect = card.getBoundingClientRect();
+          const textRect = hiddenText.getBoundingClientRect();
+
+          const cardCenter = cardRect.left + cardRect.width / 2;
+          const textCenter = textRect.left + textRect.width / 2;
+
+          return cardCenter - textCenter;
+        }
+
+        const tl = gsap.timeline({ paused: true });
+
+        tl.to(
+          blurLayer,
+          {
+            opacity: 1,
+            scale: 1,
+            duration: 1,
+            ease: "power2.out",
+            overwrite: "auto"
+          },
+          0
+        );
+
+        tl.to(
+          verticalLine,
+          {
+            rotate: 90,
+            height: "10rem",
+            x: () => getLineShiftToCenter(),
+            duration: 0.9,
+            ease: "back.out(1.7)",
+            overwrite: "auto"
+          },
+          0
+        );
+
+        tl.to(
+          hiddenText,
+          {
+            opacity: 1,
+            x: () => getTextShiftToCenter(),
+            y: -20,
+            duration: 0.6,
+            ease: "power2.out",
+            overwrite: "auto"
+          },
+          0.15
+        );
+
+        const onEnter = () => tl.play();
+        const onLeave = () => tl.reverse();
+
+        card.addEventListener("mouseenter", onEnter);
+        card.addEventListener("mouseleave", onLeave);
+
+        cleanups.push(() => {
+          card.removeEventListener("mouseenter", onEnter);
+          card.removeEventListener("mouseleave", onLeave);
+          delete card.dataset.hoverInit;
+        });
+      });
+
+      return () => {
+        cleanups.forEach((fn) => fn());
+      };
+    });
+
+    mm.add(`(max-width: ${CONFIG.desktopMin - 1}px)`, () => {
+      const cards = document.querySelectorAll(SELECTORS.productCard);
+
+      cards.forEach((card) => {
+        const blurLayer = card.querySelector(SELECTORS.blurLayer);
+        const verticalLine = card.querySelector(SELECTORS.verticalLine);
+        const hiddenText = card.querySelector(SELECTORS.hiddenText);
+
+        if (blurLayer) {
+          gsap.set(blurLayer, {
+            clearProps: "all",
+            opacity: 1,
+            scale: 1
+          });
+        }
+
+        if (verticalLine) {
+          gsap.set(verticalLine, {
+            clearProps: "all",
+            rotate: 0,
+            height: "3rem",
+            x: 0
+          });
+        }
+
+        if (hiddenText) {
+          gsap.set(hiddenText, {
+            clearProps: "all",
+            opacity: 1,
+            x: 0,
+            y: 0
+          });
+        }
+
+        delete card.dataset.hoverInit;
+      });
+    });
   }
 
   function initNavMenu() {
@@ -78,6 +285,7 @@ window.Webflow.push(() => {
     }
 
     const tl = gsap.timeline({ paused: true });
+
     tl.to(panel, {
       x: "0%",
       opacity: 1,
@@ -482,9 +690,13 @@ window.Webflow.push(() => {
     );
   }
 
+  initProductButtonArrowHover();
+  initProductCardHover();
   initNavMenu();
   initBurgerHover();
   initMobileFilters();
   initAccordion();
   initScrollReveal();
+
+  console.log("local site.js loaded");
 });
