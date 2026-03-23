@@ -20,7 +20,6 @@ try {
   } catch (err) {
     console.error("home.js crashed:", err);
   }
-});
 
   
   if (window.__coreAnimationsInitialized) return;
