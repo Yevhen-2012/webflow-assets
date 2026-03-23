@@ -219,5 +219,5 @@ window.Webflow.push(() => {
   initBurgerHover();
   initScrollReveal();
 
-  console.log("core.js loaded");
+  console.log("home.js loaded");
 });
