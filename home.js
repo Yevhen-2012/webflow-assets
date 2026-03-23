@@ -1,7 +1,10 @@
 "use strict";
 
+console.log("home.js file fetched");
+
 window.Webflow ||= [];
 window.Webflow.push(() => {
+  console.log("home.js Webflow callback start");
   if (window.__coreAnimationsInitialized) return;
   window.__coreAnimationsInitialized = true;
 
@@ -219,5 +222,6 @@ window.Webflow.push(() => {
   initBurgerHover();
   initScrollReveal();
 
+    console.log("home.js loaded");
   console.log("home.js loaded");
 });
