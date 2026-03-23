@@ -5,6 +5,24 @@ console.log("home.js file fetched");
 window.Webflow ||= [];
 window.Webflow.push(() => {
   console.log("home.js Webflow callback start");
+
+try {
+    console.log("before initProductButtonArrowHover");
+    initProductButtonArrowHover();
+
+    console.log("before initProductCardHover");
+    initProductCardHover();
+
+    console.log("before initAccordion");
+    initAccordion();
+
+    console.log("home.js loaded");
+  } catch (err) {
+    console.error("home.js crashed:", err);
+  }
+});
+
+  
   if (window.__coreAnimationsInitialized) return;
   window.__coreAnimationsInitialized = true;
 
