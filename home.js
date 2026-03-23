@@ -6,24 +6,8 @@ window.Webflow ||= [];
 window.Webflow.push(() => {
   console.log("home.js Webflow callback start");
 
-try {
-    console.log("before initProductButtonArrowHover");
-    initProductButtonArrowHover();
-
-    console.log("before initProductCardHover");
-    initProductCardHover();
-
-    console.log("before initAccordion");
-    initAccordion();
-
-    console.log("home.js loaded");
-  } catch (err) {
-    console.error("home.js crashed:", err);
-  }
-
-  
-  if (window.__coreAnimationsInitialized) return;
-  window.__coreAnimationsInitialized = true;
+  if (window.__homeAnimationsInitialized) return;
+  window.__homeAnimationsInitialized = true;
 
   const hasGSAP = typeof gsap !== "undefined";
   const hasScrollTrigger = typeof ScrollTrigger !== "undefined";
@@ -33,12 +17,23 @@ try {
   }
 
   const SELECTORS = {
-    burger: ".nav_menu-burger",
-    navPanel: ".nav-wraper",
-    navItemText: ".nav-link-text",
-    navLink: ".nav-link",
-    burgerBottomLine: ".nav_burger-item.short:last-child",
-    revealContainer: ".container"
+    accordionRow: ".row-wraper, .row-wrapper",
+    accordionTrigger: ".col-2-text, .col2-item",
+    accordionPanel: ".col3-item",
+
+    productCard: ".section_products-grid-card",
+    productButton: ".button-main_btn",
+    productButtonArrow: ".awesome-arrow",
+    blurLayer: ".blur_layer",
+    verticalLine: ".vertical-line",
+    hiddenText: ".hidden-text"
+  };
+
+  const CONFIG = {
+    accordionSingleOpen: true,
+    accordionDuration: 0.5,
+    accordionPeekLines: 1,
+    desktopMin: 992
   };
 
   function debounce(fn, wait = 150) {
@@ -49,196 +44,283 @@ try {
     };
   }
 
-  function initNavMenu() {
+  function initProductButtonArrowHover() {
     if (!hasGSAP) return;
 
-    const burger = document.querySelector(SELECTORS.burger);
-    const panel = document.querySelector(SELECTORS.navPanel);
+    const buttons = document.querySelectorAll(
+      `${SELECTORS.productCard} ${SELECTORS.productButton}`
+    );
+    if (!buttons.length) return;
 
-    if (!burger || !panel) return;
-    if (burger.dataset.navInit === "true") return;
-    burger.dataset.navInit = "true";
+    buttons.forEach((button) => {
+      if (button.dataset.arrowHoverInit === "true") return;
+      button.dataset.arrowHoverInit = "true";
 
-    const items = panel.querySelectorAll(SELECTORS.navItemText);
-    let isOpen = false;
+      const arrow = button.querySelector(SELECTORS.productButtonArrow);
+      if (!arrow) return;
 
-    gsap.set(panel, { x: "100%", opacity: 0 });
-    if (items.length) gsap.set(items, { yPercent: 200, opacity: 0 });
+      gsap.set(arrow, { x: 0 });
 
-    const tl = gsap.timeline({ paused: true });
+      button.addEventListener("mouseenter", () => {
+        gsap.to(arrow, {
+          x: 10,
+          duration: 0.3,
+          ease: "bounce.out",
+          overwrite: "auto"
+        });
+      });
 
-    tl.to(panel, {
-      x: "0%",
-      opacity: 1,
-      duration: 0.5,
-      ease: "power3.out"
+      button.addEventListener("mouseleave", () => {
+        gsap.to(arrow, {
+          x: 0,
+          duration: 0.3,
+          ease: "bounce.out",
+          overwrite: "auto"
+        });
+      });
     });
+  }
 
-    if (items.length) {
-      tl.to(
-        items,
-        {
-          yPercent: 0,
+  function initProductCardHover() {
+    if (!hasGSAP) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add(`(min-width: ${CONFIG.desktopMin}px)`, () => {
+      const cards = document.querySelectorAll(SELECTORS.productCard);
+      if (!cards.length) return;
+
+      const cleanups = [];
+
+      cards.forEach((card) => {
+        const blurLayer = card.querySelector(SELECTORS.blurLayer);
+        const verticalLine = card.querySelector(SELECTORS.verticalLine);
+        const hiddenText = card.querySelector(SELECTORS.hiddenText);
+
+        if (!blurLayer || !verticalLine || !hiddenText) return;
+        if (card.dataset.hoverInit === "true") return;
+        card.dataset.hoverInit = "true";
+
+        gsap.set(blurLayer, {
+          opacity: 0,
+          scale: 1.03,
+          pointerEvents: "none"
+        });
+
+        gsap.set(verticalLine, {
+          rotate: 0,
+          height: "3rem",
+          x: 0,
+          transformOrigin: "50% 50%"
+        });
+
+        gsap.set(hiddenText, {
+          opacity: 0,
+          x: 0,
+          y: 0
+        });
+
+        function getLineShiftToCenter() {
+          const cardRect = card.getBoundingClientRect();
+          const lineRect = verticalLine.getBoundingClientRect();
+          return cardRect.left + cardRect.width / 2 - (lineRect.left + lineRect.width / 2);
+        }
+
+        function getTextShiftToCenter() {
+          const cardRect = card.getBoundingClientRect();
+          const textRect = hiddenText.getBoundingClientRect();
+          return cardRect.left + cardRect.width / 2 - (textRect.left + textRect.width / 2);
+        }
+
+        const tl = gsap.timeline({ paused: true });
+
+        tl.to(blurLayer, {
           opacity: 1,
-          duration: 0.5,
-          ease: "power3.out",
-          stagger: 0.06
-        },
-        "-=0.2"
-      );
-    }
+          scale: 1,
+          duration: 1,
+          ease: "power2.out",
+          overwrite: "auto"
+        }, 0);
 
-    function syncClosedState() {
-      gsap.set(panel, { x: "100%", opacity: 0 });
-      if (items.length) gsap.set(items, { yPercent: 200, opacity: 0 });
-    }
+        tl.to(verticalLine, {
+          rotate: 90,
+          height: "10rem",
+          x: () => getLineShiftToCenter(),
+          duration: 0.9,
+          ease: "back.out(1.7)",
+          overwrite: "auto"
+        }, 0);
 
-    function openMenu() {
-      if (isOpen) return;
-      isOpen = true;
-      document.documentElement.classList.add("menu-open");
-      document.body.classList.add("menu-open");
-      tl.play(0);
-    }
+        tl.to(hiddenText, {
+          opacity: 1,
+          x: () => getTextShiftToCenter(),
+          y: -20,
+          duration: 0.6,
+          ease: "power2.out",
+          overwrite: "auto"
+        }, 0.15);
 
-    function closeMenu() {
-      if (!isOpen) return;
-      isOpen = false;
-      document.documentElement.classList.remove("menu-open");
-      document.body.classList.remove("menu-open");
-      tl.reverse();
-    }
+        const onEnter = () => tl.play();
+        const onLeave = () => tl.reverse();
 
-    tl.eventCallback("onReverseComplete", syncClosedState);
+        card.addEventListener("mouseenter", onEnter);
+        card.addEventListener("mouseleave", onLeave);
 
-    burger.addEventListener("click", (e) => {
-      e.stopPropagation();
-      isOpen ? closeMenu() : openMenu();
+        cleanups.push(() => {
+          card.removeEventListener("mouseenter", onEnter);
+          card.removeEventListener("mouseleave", onLeave);
+          delete card.dataset.hoverInit;
+        });
+      });
+
+      return () => cleanups.forEach((fn) => fn());
     });
 
-    panel.addEventListener("click", (e) => {
-      if (e.target.closest(SELECTORS.navLink)) closeMenu();
+    mm.add(`(max-width: ${CONFIG.desktopMin - 1}px)`, () => {
+      document.querySelectorAll(SELECTORS.productCard).forEach((card) => {
+        const blurLayer = card.querySelector(SELECTORS.blurLayer);
+        const verticalLine = card.querySelector(SELECTORS.verticalLine);
+        const hiddenText = card.querySelector(SELECTORS.hiddenText);
+
+        if (blurLayer) gsap.set(blurLayer, { clearProps: "all", opacity: 1, scale: 1 });
+        if (verticalLine) gsap.set(verticalLine, { clearProps: "all", rotate: 0, height: "3rem", x: 0 });
+        if (hiddenText) gsap.set(hiddenText, { clearProps: "all", opacity: 1, x: 0, y: 0 });
+
+        delete card.dataset.hoverInit;
+      });
     });
-
-    document.addEventListener(
-      "pointerdown",
-      (e) => {
-        if (!isOpen) return;
-        if (burger.contains(e.target) || panel.contains(e.target)) return;
-        closeMenu();
-      },
-      { passive: true }
-    );
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeMenu();
-    });
-
-    window.addEventListener(
-      "resize",
-      debounce(() => {
-        if (!isOpen) syncClosedState();
-      }, 120)
-    );
   }
 
-  function initBurgerHover() {
+  function initAccordion() {
     if (!hasGSAP) return;
 
-    const burger = document.querySelector(SELECTORS.burger);
-    if (!burger) return;
-    if (burger.dataset.burgerHoverInit === "true") return;
-    burger.dataset.burgerHoverInit = "true";
+    const rows = gsap.utils.toArray(SELECTORS.accordionRow);
+    if (!rows.length) return;
 
-    const bottomLine = burger.querySelector(SELECTORS.burgerBottomLine);
-    if (!bottomLine) return;
+    function getLineHeight(el) {
+      const styles = getComputedStyle(el);
+      let lineHeight = parseFloat(styles.lineHeight);
 
-    gsap.set(bottomLine, { width: "50%" });
-
-    const hoverIn = () =>
-      gsap.to(bottomLine, {
-        width: "100%",
-        duration: 0.25,
-        ease: "bounce.out",
-        overwrite: "auto"
-      });
-
-    const hoverOut = () =>
-      gsap.to(bottomLine, {
-        width: "50%",
-        duration: 0.25,
-        ease: "bounce.out",
-        overwrite: "auto"
-      });
-
-    burger.addEventListener("mouseenter", hoverIn);
-    burger.addEventListener("mouseleave", hoverOut);
-    burger.addEventListener("focusin", hoverIn);
-    burger.addEventListener("focusout", hoverOut);
-  }
-
-  function initScrollReveal() {
-    if (!hasGSAP || !hasScrollTrigger) return;
-
-    const containers = gsap.utils.toArray(SELECTORS.revealContainer);
-    if (!containers.length) return;
-
-    function getStart(container) {
-      const vh = window.innerHeight;
-      const h = container.offsetHeight;
-
-      if (h > vh * 0.9) return "top 90%";
-      if (h > vh * 0.5) return "top 85%";
-      return "top 75%";
-    }
-
-    containers.forEach((container, index) => {
-      if (container.dataset.revealInit === "true") return;
-      container.dataset.revealInit = "true";
-
-      if (index === 0) {
-        gsap.set(container, { opacity: 1, y: 0 });
-        return;
+      if (Number.isNaN(lineHeight)) {
+        const fontSize = parseFloat(styles.fontSize) || 16;
+        lineHeight = Math.round(fontSize * 1.2);
       }
 
-      gsap.fromTo(
-        container,
-        { opacity: 0, y: 24 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.9,
-          ease: "power3.out",
-          immediateRender: false,
-          scrollTrigger: {
-            trigger: container,
-            start: getStart(container),
-            toggleActions: "play none none none",
-            once: true,
-            invalidateOnRefresh: true
-          }
+      return lineHeight;
+    }
+
+    function getFirstTextEl(inner) {
+      return inner.querySelector("p, li, span, div, h1, h2, h3, h4, h5, h6") || inner;
+    }
+
+    function computeCollapsedHeight(panel, inner) {
+      const firstTextEl = getFirstTextEl(inner);
+      const lineHeight = getLineHeight(firstTextEl);
+      const panelStyles = getComputedStyle(panel);
+      const padY =
+        (parseFloat(panelStyles.paddingTop) || 0) +
+        (parseFloat(panelStyles.paddingBottom) || 0);
+
+      return Math.ceil(lineHeight * CONFIG.accordionPeekLines + padY);
+    }
+
+    rows.forEach((row) => {
+      if (row.dataset.accordionInit === "true") return;
+      row.dataset.accordionInit = "true";
+
+      const trigger = row.querySelector(SELECTORS.accordionTrigger);
+      const panel = row.querySelector(SELECTORS.accordionPanel);
+      if (!trigger || !panel) return;
+
+      let inner = panel.querySelector(".col3-panel-inner");
+      if (!inner) {
+        inner = document.createElement("div");
+        inner.className = "col3-panel-inner";
+
+        while (panel.firstChild) inner.appendChild(panel.firstChild);
+        panel.appendChild(inner);
+      }
+
+      row._acc = {
+        open: false,
+        panel,
+        inner,
+        collapsedH: computeCollapsedHeight(panel, inner)
+      };
+
+      gsap.set(panel, {
+        display: "block",
+        overflow: "hidden",
+        height: row._acc.collapsedH
+      });
+
+      row.classList.remove("is-open");
+      trigger.style.cursor = "pointer";
+
+      trigger.addEventListener("click", (e) => {
+        if (e.target.closest("a")) e.preventDefault();
+
+        if (CONFIG.accordionSingleOpen) {
+          rows.forEach((otherRow) => {
+            if (otherRow === row || !otherRow._acc?.open) return;
+
+            gsap.to(otherRow._acc.panel, {
+              height: otherRow._acc.collapsedH,
+              duration: CONFIG.accordionDuration,
+              ease: "power2.inOut",
+              overwrite: "auto"
+            });
+
+            otherRow._acc.open = false;
+            otherRow.classList.remove("is-open");
+          });
         }
-      );
+
+        if (!row._acc.open) {
+          gsap.to(panel, {
+            height: "auto",
+            duration: CONFIG.accordionDuration,
+            ease: "power2.out",
+            overwrite: "auto"
+          });
+
+          row._acc.open = true;
+          row.classList.add("is-open");
+        } else {
+          gsap.to(panel, {
+            height: row._acc.collapsedH,
+            duration: CONFIG.accordionDuration,
+            ease: "power2.inOut",
+            overwrite: "auto"
+          });
+
+          row._acc.open = false;
+          row.classList.remove("is-open");
+        }
+      });
     });
 
-    window.addEventListener(
-      "load",
-      () => ScrollTrigger.refresh(),
-      { once: true }
-    );
+    window.addEventListener("resize", debounce(() => {
+      rows.forEach((row) => {
+        if (!row._acc?.panel || !row._acc?.inner) return;
 
-    window.addEventListener(
-      "resize",
-      debounce(() => {
-        ScrollTrigger.refresh();
-      }, 150)
-    );
+        const { panel, inner, open } = row._acc;
+        row._acc.collapsedH = computeCollapsedHeight(panel, inner);
+
+        if (open) {
+          gsap.set(panel, { height: "auto" });
+        } else {
+          gsap.set(panel, { height: row._acc.collapsedH });
+        }
+      });
+
+      if (hasScrollTrigger) ScrollTrigger.refresh();
+    }, 150));
   }
 
-  initNavMenu();
-  initBurgerHover();
-  initScrollReveal();
+  initProductButtonArrowHover();
+  initProductCardHover();
+  initAccordion();
 
-    console.log("home.js loaded");
   console.log("home.js loaded");
 });
