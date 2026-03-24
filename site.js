@@ -649,12 +649,7 @@ window.Webflow.push(() => {
       if (container.dataset.revealInit === "true") return;
       container.dataset.revealInit = "true";
 
-      if (index === 0) {
-        gsap.set(container, { opacity: 1, y: 0 });
-        return;
-      }
-
-      gsap.fromTo(
+     gsap.fromTo(
         container,
         { opacity: 0, y: 24 },
         {
