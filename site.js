@@ -630,61 +630,62 @@ window.Webflow.push(() => {
     );
   }
 
-  function initScrollReveal() {
-    if (!hasGSAP || !hasScrollTrigger) return;
+function initScrollReveal() {
+  if (!hasGSAP || !hasScrollTrigger) return;
 
-    const containers = gsap.utils.toArray(SELECTORS.revealContainer);
-    if (!containers.length) return;
+  const containers = gsap.utils.toArray(SELECTORS.revealContainer);
+  if (!containers.length) return;
 
-    function getStart(container) {
-      const vh = window.innerHeight;
-      const h = container.offsetHeight;
+  function getStart(container) {
+    const vh = window.innerHeight;
+    const h = container.offsetHeight;
 
-      if (h > vh * 0.9) return "top 90%";
-      if (h > vh * 0.5) return "top 85%";
-      return "top 75%";
-    }
-
-    containers.forEach((container, index) => {
-      if (container.dataset.revealInit === "true") return;
-      container.dataset.revealInit = "true";
-
-     gsap.fromTo(
-        container,
-        { opacity: 0, y: 24 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.9,
-          ease: "power3.out",
-          immediateRender: false,
-          scrollTrigger: {
-            trigger: container,
-            start: getStart(container),
-            toggleActions: "play none none none",
-            once: true,
-            invalidateOnRefresh: true
-          }
-        }
-      );
-    });
-
-    window.addEventListener(
-      "load",
-      () => {
-        ScrollTrigger.refresh();
-      },
-      { once: true }
-    );
-
-    window.addEventListener(
-      "resize",
-      debounce(() => {
-        ScrollTrigger.refresh();
-      }, 150)
-    );
+    if (h > vh * 0.9) return "top 90%";
+    if (h > vh * 0.5) return "top 85%";
+    return "top 75%";
   }
 
+  containers.forEach((container) => {
+    if (container.dataset.revealInit === "true") return;
+    container.dataset.revealInit = "true";
+
+    gsap.fromTo(
+      container,
+      { opacity: 0, y: 24 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.9,
+        ease: "power3.out",
+        immediateRender: false,
+        scrollTrigger: {
+          trigger: container,
+          start: getStart(container),
+          toggleActions: "play none none none",
+          once: true,
+          invalidateOnRefresh: true
+        }
+      }
+    );
+  });
+
+  window.addEventListener(
+    "load",
+    () => {
+      ScrollTrigger.refresh();
+    },
+    { once: true }
+  );
+
+  window.addEventListener(
+    "resize",
+    debounce(() => {
+      ScrollTrigger.refresh();
+    }, 150)
+  );
+}
+
+  
   initProductButtonArrowHover();
   initProductCardHover();
   initNavMenu();
