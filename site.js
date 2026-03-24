@@ -29,7 +29,7 @@ window.Webflow.push(() => {
     accordionTrigger: ".col-2-text, .col2-item",
     accordionPanel: ".col3-item",
 
-    revealContainer: ".container",
+    revealContainer: ".cc-reveal",
 
     productCard: ".section_products-grid-card",
     productButton: ".button-main_btn",
