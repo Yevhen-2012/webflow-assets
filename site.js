@@ -1,10 +1,26 @@
 "use strict";
 
+// Глобальный ловец обычных JS-ошибок
+window.addEventListener("error", (e) => {
+  console.error("GLOBAL ERROR:", e.message, e.filename, e.lineno);
+});
+
+// Глобальный ловец ошибок промисов
+window.addEventListener("unhandledrejection", (e) => {
+  console.error("PROMISE ERROR:", e.reason);
+});
+
+// ======================================================
+// ОСНОВНОЙ БЛОК ИНИЦИАЛИЗАЦИИ САЙТОВЫХ АНИМАЦИЙ И UI
+// ======================================================
+
 window.Webflow ||= [];
 window.Webflow.push(() => {
+  // Защита от повторной инициализации всего блока
   if (window.__siteAnimationsInitialized) return;
   window.__siteAnimationsInitialized = true;
 
+  // Проверяем наличие GSAP и ScrollTrigger
   const hasGSAP = typeof gsap !== "undefined";
   const hasScrollTrigger = typeof ScrollTrigger !== "undefined";
 
@@ -12,6 +28,7 @@ window.Webflow.push(() => {
     gsap.registerPlugin(ScrollTrigger);
   }
 
+  // Все используемые селекторы в одном месте
   const SELECTORS = {
     burger: ".nav_menu-burger",
     navPanel: ".nav-wraper",
@@ -29,23 +46,28 @@ window.Webflow.push(() => {
     accordionTrigger: ".col-2-text, .col2-item",
     accordionPanel: ".col3-item",
 
-    revealContainer: ".cc-reveal",
-
     productCard: ".section_products-grid-card",
     productButton: ".button-main_btn",
     productButtonArrow: ".awesome-arrow",
     blurLayer: ".blur_layer",
     verticalLine: ".vertical-line",
-    hiddenText: ".hidden-text"
+    hiddenText: ".hidden-text",
+
+    // Элементы для filter by link / scroll reveal
+    revealItem: ".cc-reveal",
+    filterRadioField: ".radio_field"
   };
 
+  // Конфиг с общими настройками
   const CONFIG = {
     accordionSingleOpen: true,
     accordionDuration: 0.5,
     accordionPeekLines: 1,
-    desktopMin: 992
+    desktopMin: 992,
+    filterInitDelay: 300
   };
 
+  // Debounce для resize и прочих частых событий
   function debounce(fn, wait = 150) {
     let timeout;
     return (...args) => {
@@ -54,6 +76,7 @@ window.Webflow.push(() => {
     };
   }
 
+  // Получение текста из поля фильтра
   function getTextFromField(field) {
     const textEl =
       field?.querySelector(".w-form-label") ||
@@ -63,6 +86,89 @@ window.Webflow.push(() => {
     return (textEl?.textContent || "").trim();
   }
 
+  // ======================================================
+  // ФИЛЬТР ПО ССЫЛКЕ
+  // ======================================================
+  // Считывает параметр category из URL
+  // Пример: ?category=Kitchen
+  // Находит нужный .radio_field по data-category
+  // И программно активирует соответствующий radio input
+  function initFilterByLink() {
+    const params = new URLSearchParams(window.location.search);
+    const category = params.get("category");
+
+    // Если category нет в URL, ничего не делаем
+    if (!category) return;
+
+    // Ищем нужное поле по data-category
+    const targetField = document.querySelector(
+      `${SELECTORS.filterRadioField}[data-category="${category}"]`
+    );
+    if (!targetField) return;
+
+    // Ищем radio внутри найденного поля
+    const targetInput = targetField.querySelector('input[type="radio"]');
+    if (!targetInput) return;
+
+    // Даём Webflow / Finsweet / DOM немного времени на инициализацию
+    setTimeout(() => {
+      targetInput.checked = true;
+      targetInput.dispatchEvent(new Event("change", { bubbles: true }));
+      targetInput.dispatchEvent(new Event("input", { bubbles: true }));
+      targetInput.click();
+    }, CONFIG.filterInitDelay);
+  }
+
+  // ======================================================
+  // SCROLL REVEAL
+  // ======================================================
+  // Анимация появления элементов с классом .cc-reveal при скролле
+  function initScrollReveal() {
+    // Проверяем, доступны ли GSAP и ScrollTrigger
+    if (!hasGSAP || !hasScrollTrigger) {
+      console.warn("GSAP или ScrollTrigger не найден");
+      return;
+    }
+
+    // Берём только те элементы, которые ещё не были инициализированы
+    const items = document.querySelectorAll(
+      `${SELECTORS.revealItem}:not([data-reveal-init])`
+    );
+    if (!items.length) return;
+
+    items.forEach((item) => {
+      // Помечаем элемент как инициализированный
+      item.setAttribute("data-reveal-init", "true");
+
+      // Начальное состояние до появления
+      gsap.set(item, {
+        opacity: 0,
+        y: 40,
+        filter: "blur(8px)",
+        willChange: "transform, opacity, filter"
+      });
+
+      // Анимация появления
+      gsap.to(item, {
+        opacity: 1,
+        y: 0,
+        filter: "blur(0px)",
+        duration: 0.9,
+        ease: "power2.out",
+        clearProps: "willChange,filter",
+        scrollTrigger: {
+          trigger: item,
+          start: "top 85%",
+          toggleActions: "play none none none",
+          once: true
+        }
+      });
+    });
+  }
+
+  // ======================================================
+  // HOVER СТРЕЛКИ В КНОПКЕ КАРТОЧКИ ТОВАРА
+  // ======================================================
   function initProductButtonArrowHover() {
     if (!hasGSAP) return;
 
@@ -72,14 +178,17 @@ window.Webflow.push(() => {
     if (!buttons.length) return;
 
     buttons.forEach((button) => {
+      // Защита от повторной инициализации
       if (button.dataset.arrowHoverInit === "true") return;
       button.dataset.arrowHoverInit = "true";
 
       const arrow = button.querySelector(SELECTORS.productButtonArrow);
       if (!arrow) return;
 
+      // Начальная позиция стрелки
       gsap.set(arrow, { x: 0 });
 
+      // Наведение
       const onEnter = () => {
         gsap.to(arrow, {
           x: 10,
@@ -89,6 +198,7 @@ window.Webflow.push(() => {
         });
       };
 
+      // Уход курсора
       const onLeave = () => {
         gsap.to(arrow, {
           x: 0,
@@ -103,6 +213,9 @@ window.Webflow.push(() => {
     });
   }
 
+  // ======================================================
+  // HOVER АНИМАЦИЯ КАРТОЧКИ ТОВАРА
+  // ======================================================
   function initProductCardHover() {
     if (!hasGSAP) {
       console.warn("GSAP не найден");
@@ -111,6 +224,7 @@ window.Webflow.push(() => {
 
     const mm = gsap.matchMedia();
 
+    // Анимации только на desktop
     mm.add(`(min-width: ${CONFIG.desktopMin}px)`, () => {
       const cards = document.querySelectorAll(SELECTORS.productCard);
       if (!cards.length) return;
@@ -126,6 +240,7 @@ window.Webflow.push(() => {
         if (card.dataset.hoverInit === "true") return;
         card.dataset.hoverInit = "true";
 
+        // Начальные состояния элементов
         gsap.set(blurLayer, {
           opacity: 0,
           scale: 1.03,
@@ -145,6 +260,7 @@ window.Webflow.push(() => {
           y: 0
         });
 
+        // Сдвиг линии к центру карточки
         function getLineShiftToCenter() {
           const cardRect = card.getBoundingClientRect();
           const lineRect = verticalLine.getBoundingClientRect();
@@ -155,6 +271,7 @@ window.Webflow.push(() => {
           return cardCenter - lineCenter;
         }
 
+        // Сдвиг текста к центру карточки
         function getTextShiftToCenter() {
           const cardRect = card.getBoundingClientRect();
           const textRect = hiddenText.getBoundingClientRect();
@@ -165,6 +282,7 @@ window.Webflow.push(() => {
           return cardCenter - textCenter;
         }
 
+        // Основной timeline hover-анимации
         const tl = gsap.timeline({ paused: true });
 
         tl.to(
@@ -211,6 +329,7 @@ window.Webflow.push(() => {
         card.addEventListener("mouseenter", onEnter);
         card.addEventListener("mouseleave", onLeave);
 
+        // Cleanup для matchMedia
         cleanups.push(() => {
           card.removeEventListener("mouseenter", onEnter);
           card.removeEventListener("mouseleave", onLeave);
@@ -223,6 +342,7 @@ window.Webflow.push(() => {
       };
     });
 
+    // Сброс состояний на mobile/tablet
     mm.add(`(max-width: ${CONFIG.desktopMin - 1}px)`, () => {
       const cards = document.querySelectorAll(SELECTORS.productCard);
 
@@ -262,6 +382,9 @@ window.Webflow.push(() => {
     });
   }
 
+  // ======================================================
+  // МОБИЛЬНОЕ / BURGER MENU
+  // ======================================================
   function initNavMenu() {
     if (!hasGSAP) return;
 
@@ -279,6 +402,7 @@ window.Webflow.push(() => {
     const items = panel.querySelectorAll(SELECTORS.navItemText);
     let isOpen = false;
 
+    // Начальное закрытое состояние
     gsap.set(panel, { x: "100%", opacity: 0 });
     if (items.length) {
       gsap.set(items, { yPercent: 200, opacity: 0 });
@@ -286,6 +410,7 @@ window.Webflow.push(() => {
 
     const tl = gsap.timeline({ paused: true });
 
+    // Выезд панели
     tl.to(panel, {
       x: "0%",
       opacity: 1,
@@ -293,6 +418,7 @@ window.Webflow.push(() => {
       ease: "power3.out"
     });
 
+    // Появление пунктов меню
     if (items.length) {
       tl.to(
         items,
@@ -307,6 +433,7 @@ window.Webflow.push(() => {
       );
     }
 
+    // Жёсткая синхронизация закрытого состояния
     function syncClosedState() {
       gsap.set(panel, { x: "100%", opacity: 0 });
       if (items.length) {
@@ -332,17 +459,20 @@ window.Webflow.push(() => {
 
     tl.eventCallback("onReverseComplete", syncClosedState);
 
+    // Клик по burger
     burger.addEventListener("click", (e) => {
       e.stopPropagation();
       isOpen ? closeMenu() : openMenu();
     });
 
+    // Закрытие по клику на ссылку внутри панели
     panel.addEventListener("click", (e) => {
       if (e.target.closest(SELECTORS.navLink)) {
         closeMenu();
       }
     });
 
+    // Закрытие по клику вне панели
     document.addEventListener(
       "pointerdown",
       (e) => {
@@ -353,10 +483,12 @@ window.Webflow.push(() => {
       { passive: true }
     );
 
+    // Закрытие по Escape
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeMenu();
     });
 
+    // При resize, если меню закрыто, синхронизируем состояние
     window.addEventListener(
       "resize",
       debounce(() => {
@@ -365,6 +497,9 @@ window.Webflow.push(() => {
     );
   }
 
+  // ======================================================
+  // HOVER НИЖНЕЙ ЛИНИИ BURGER
+  // ======================================================
   function initBurgerHover() {
     if (!hasGSAP) return;
 
@@ -401,6 +536,9 @@ window.Webflow.push(() => {
     burger.addEventListener("focusout", hoverOut);
   }
 
+  // ======================================================
+  // МОБИЛЬНЫЙ ФИЛЬТР
+  // ======================================================
   function initMobileFilters() {
     const wraps = document.querySelectorAll(SELECTORS.mobileFilterWrap);
     if (!wraps.length) return;
@@ -437,12 +575,15 @@ window.Webflow.push(() => {
         toggle.setAttribute("aria-expanded", "false");
       }
 
+      // По умолчанию закрываем список
       close();
 
+      // Делаем toggle доступным как кнопку
       toggle.setAttribute("role", "button");
       toggle.setAttribute("tabindex", "0");
       toggle.setAttribute("aria-expanded", "false");
 
+      // Открытие/закрытие по клику на header
       toggle.addEventListener("click", (e) => {
         const clickedHeader = headerClickTargets.some((sel) =>
           e.target.closest(sel)
@@ -454,6 +595,7 @@ window.Webflow.push(() => {
         isOpen() ? close() : open();
       });
 
+      // Управление с клавиатуры
       toggle.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -462,6 +604,7 @@ window.Webflow.push(() => {
         if (e.key === "Escape") close();
       });
 
+      // Клик по фильтру
       wrap.querySelectorAll(SELECTORS.mobileFilterField).forEach((field) => {
         field.addEventListener("click", () => {
           const input = field.querySelector('input[type="radio"]');
@@ -474,10 +617,12 @@ window.Webflow.push(() => {
         });
       });
 
+      // Закрытие при клике вне блока
       document.addEventListener("click", (e) => {
         if (!wrap.contains(e.target)) close();
       });
 
+      // Если уже есть выбранный radio, подставляем его текст в label
       const checked = wrap.querySelector(
         '.radio_field input[type="radio"]:checked'
       );
@@ -489,6 +634,9 @@ window.Webflow.push(() => {
     });
   }
 
+  // ======================================================
+  // ACCORDION
+  // ======================================================
   function initAccordion() {
     if (!hasGSAP) {
       console.warn("Accordion: GSAP не знайдено");
@@ -501,6 +649,7 @@ window.Webflow.push(() => {
       return;
     }
 
+    // Определение line-height
     function getLineHeight(el) {
       const styles = getComputedStyle(el);
       let lineHeight = parseFloat(styles.lineHeight);
@@ -513,12 +662,14 @@ window.Webflow.push(() => {
       return lineHeight;
     }
 
+    // Первый текстовый элемент внутри панели
     function getFirstTextEl(inner) {
       return (
         inner.querySelector("p, li, span, div, h1, h2, h3, h4, h5, h6") || inner
       );
     }
 
+    // Высота свернутого состояния аккордеона
     function computeCollapsedHeight(panel, inner) {
       const firstTextEl = getFirstTextEl(inner);
       const lineHeight = getLineHeight(firstTextEl);
@@ -538,6 +689,7 @@ window.Webflow.push(() => {
       const panel = row.querySelector(SELECTORS.accordionPanel);
       if (!trigger || !panel) return;
 
+      // Оборачиваем контент панели во внутренний контейнер, если его нет
       let inner = panel.querySelector(".col3-panel-inner");
       if (!inner) {
         inner = document.createElement("div");
@@ -557,6 +709,7 @@ window.Webflow.push(() => {
         collapsedH: computeCollapsedHeight(panel, inner)
       };
 
+      // Начальное состояние панели
       gsap.set(panel, {
         display: "block",
         overflow: "hidden",
@@ -566,9 +719,11 @@ window.Webflow.push(() => {
       row.classList.remove("is-open");
       trigger.style.cursor = "pointer";
 
+      // Логика открытия/закрытия
       trigger.addEventListener("click", (e) => {
         if (e.target.closest("a")) e.preventDefault();
 
+        // Если разрешено только одно открытое состояние
         if (CONFIG.accordionSingleOpen) {
           rows.forEach((otherRow) => {
             if (otherRow === row || !otherRow._acc?.open) return;
@@ -585,6 +740,7 @@ window.Webflow.push(() => {
           });
         }
 
+        // Открытие
         if (!row._acc.open) {
           gsap.to(panel, {
             height: "auto",
@@ -596,6 +752,7 @@ window.Webflow.push(() => {
           row._acc.open = true;
           row.classList.add("is-open");
         } else {
+          // Закрытие
           gsap.to(panel, {
             height: row._acc.collapsedH,
             duration: CONFIG.accordionDuration,
@@ -609,6 +766,7 @@ window.Webflow.push(() => {
       });
     });
 
+    // Пересчёт высоты при resize
     window.addEventListener(
       "resize",
       debounce(() => {
@@ -624,68 +782,15 @@ window.Webflow.push(() => {
             gsap.set(panel, { height: row._acc.collapsedH });
           }
         });
-
-        if (hasScrollTrigger) ScrollTrigger.refresh();
       }, 150)
     );
   }
 
-function initScrollReveal() {
-  if (!hasGSAP || !hasScrollTrigger) return;
+  // ======================================================
+  // ЗАПУСК ИНИЦИАЛИЗАЦИЙ
+  // ======================================================
 
-  const containers = gsap.utils.toArray(SELECTORS.revealContainer);
-  if (!containers.length) return;
-
-  function getStart(container) {
-    const vh = window.innerHeight;
-    const h = container.offsetHeight;
-
-    if (h > vh * 0.9) return "top 90%";
-    if (h > vh * 0.5) return "top 85%";
-    return "top 75%";
-  }
-
-  containers.forEach((container) => {
-    if (container.dataset.revealInit === "true") return;
-    container.dataset.revealInit = "true";
-
-    gsap.fromTo(
-      container,
-      { opacity: 0, y: 24 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.9,
-        ease: "power3.out",
-        immediateRender: false,
-        scrollTrigger: {
-          trigger: container,
-          start: getStart(container),
-          toggleActions: "play none none none",
-          once: true,
-          invalidateOnRefresh: true
-        }
-      }
-    );
-  });
-
-  window.addEventListener(
-    "load",
-    () => {
-      ScrollTrigger.refresh();
-    },
-    { once: true }
-  );
-
-  window.addEventListener(
-    "resize",
-    debounce(() => {
-      ScrollTrigger.refresh();
-    }, 150)
-  );
-}
-
-  
+  initFilterByLink();
   initProductButtonArrowHover();
   initProductCardHover();
   initNavMenu();
@@ -693,6 +798,4 @@ function initScrollReveal() {
   initMobileFilters();
   initAccordion();
   initScrollReveal();
-
-  console.log("local site.js loaded");
 });
